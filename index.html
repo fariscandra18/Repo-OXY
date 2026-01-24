@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Input Tabung</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Library Scanner -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f3f4f6;
+            --white: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+            --success: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; padding: 20px; }
+
+        /* Container App Style */
+        .app-container {
+            width: 100%; max-width: 480px;
+            background: var(--white); border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden; display: flex; flex-direction: column;
+            position: relative;
+        }
+
+        /* Header */
+        header {
+            background: var(--primary); color: white; padding: 1.5rem;
+            text-align: center;
+        }
+        header h1 { font-size: 1.2rem; margin-bottom: 5px; }
+        header p { font-size: 0.8rem; opacity: 0.9; }
+
+        /* Tabs */
+        .nav-tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .nav-tab {
+            flex: 1; padding: 15px; text-align: center; cursor: pointer;
+            font-weight: 500; color: #6b7280; transition: 0.2s;
+        }
+        .nav-tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: #eff6ff; }
+
+        /* Content Area */
+        .content-area { padding: 20px; display: none; }
+        .content-area.active { display: block; }
+
+        /* Forms */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; color: #374151; }
+        .form-control {
+            width: 100%; padding: 12px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 1rem; transition: 0.2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 2px solid rgba(37,99,235,0.2); }
+
+        /* Buttons */
+        .btn {
+            width: 100%; padding: 12px; border: none; border-radius: 8px;
+            font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 1rem;
+            display: inline-flex; justify-content: center; align-items: center;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-success { background: var(--success); color: white; margin-top: 10px; }
+        
+        /* Scanner Overlay & Reader */
+        #reader-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: black; z-index: 1000; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        #reader-container.active { display: flex; }
+
+        /* Fix Black Screen: Force video size */
+        #reader video { 
+            width: 100%; height: 100%; 
+            object-fit: cover; /* Membuat video full screen */
+            position: absolute; top: 0; left: 0;
+        }
+        /* Area library html5-qrcode */
+        #reader { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+
+        /* Scanner Box Overlay */
+        .scan-box {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; height: 200px;
+            border: 2px solid rgba(0, 255, 0, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); 
+            pointer-events: none;
+            z-index: 1002;
+        }
+        .scan-line {
+            width: 100%; height: 2px;
+            background: #ef4444; 
+            position: absolute;
+            top: 0;
+            animation: scan-anim 2s infinite linear;
+        }
+        @keyframes scan-anim {
+            0% { top: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        
+        /* Tombol Scanner Overlay */
+        .overlay-buttons {
+            position: absolute; bottom: 30px; 
+            width: 100%; display: flex; flex-direction: column; 
+            gap: 10px; align-items: center; z-index: 1003;
+        }
+        .scan-btn-overlay {
+            background: white; color: black; border: none;
+            padding: 12px 30px; border-radius: 30px; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer; width: 80%; max-width: 300px;
+        }
+        .scan-btn-overlay.secondary {
+            background: rgba(255,255,255,0.2); color: white; 
+            width: auto; padding: 8px 20px; font-size: 0.9rem;
+        }
+
+        .hint-text {
+            position: absolute; top: 40px; color: white; font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            z-index: 1001; text-align: center; width: 100%;
+        }
+
+        /* Generator Preview */
+        .preview-box {
+            border: 2px dashed #d1d5db; padding: 20px; border-radius: 10px;
+            text-align: center; margin-top: 15px; background: #f9fafb;
+        }
+        .barcode-img { max-width: 100%; height: 80px; margin-bottom: 10px; }
+        .download-link {
+            display: inline-block; color: var(--primary); text-decoration: none;
+            font-weight: 600; font-size: 0.9rem; cursor: pointer;
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3; border-top: 3px solid var(--primary);
+            border-radius: 50%; width: 24px; height: 24px;
+            animation: spin 1s linear infinite; display: none; margin: 10px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Input File Tersembunyi untuk Upload Foto -->
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <!-- OVERLAY SCANNER (FULLSCREEN) -->
+    <div id="reader-container">
+        <div class="hint-text">Arahkan garis ke Barcode...</div>
+        <div id="reader"></div>
+        <div class="scan-box">
+            <div class="scan-line"></div>
+        </div>
+        
+        <div class="overlay-buttons">
+            <!-- Tombol Upload Foto -->
+            <button class="scan-btn-overlay" onclick="document.getElementById('fileInput').click()">
+                📂 Upload Foto
+            </button>
+            <button class="scan-btn-overlay secondary" onclick="stopCamera()">
+                Batal / Tutup
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <header>
+            <h1>Monitoring Tabung</h1>
+            <p>Input Data & Cetak Barcode</p>
+        </header>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('input')">📝 Scan & Input</div>
+            <div class="nav-tab" onclick="switchTab('generator')">🏷️ Buat Barcode</div>
+        </div>
+
+        <!-- TAB 1: SCAN & INPUT -->
+        <div id="tab-input" class="content-area active">
+            <form id="dataForm" onsubmit="handleFormSubmit(event)">
+                
+                <div class="form-group">
+                    <div style="background: #eff6ff; padding: 10px; font-size: 0.75rem; color: #1e40af; margin-bottom: 10px; border-radius: 6px;">
+                        ⚠️ Pastikan Izin Kamera Diizinkan. Jika layar hitam, gunakan tombol <strong>Upload Foto</strong>.
+                    </div>
+
+                    <button type="button" class="btn btn-primary" onclick="startCamera()">
+                        📸 Buka Kamera Scan
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>ID Barcode</label>
+                    <input type="text" id="barcode" class="form-control" placeholder="Scan atau ketik manual" onchange="identify(this.value)" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Jenis Tabung</label>
+                    <select id="gasType" class="form-control" required>
+                        <option value="" disabled selected>-- Pilih/Scan Jenis --</option>
+                        <option value="Oxygen Samator">Oxygen Samator</option>
+                        <option value="Oxygen HB">Oxygen HB</option>
+                        <option value="LPG Biru 12kg">LPG Biru 12kg</option>
+                        <option value="LPG Pink 12kg">LPG Pink 12kg</option>
+                        <option value="LPG 50kg">LPG 50kg</option>
+                        <option value="Acetylene">Acetylene</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Jenis Transaksi</label>
+                    <select id="transType" class="form-control" required>
+                        <option value="Permintaan">Permintaan</option>
+                        <option value="Pengeluaran">Pengeluaran</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Nama Mekanik</label>
+                    <input type="text" id="mechanic" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Alokasi</label>
+                    <select id="allocation" class="form-control" required>
+                        <option value="" disabled selected>Pilih Lokasi...</option>
+                        <option value="Reguler">Reguler</option>
+                        <option value="Storing">Storing</option>
+                        <option value="PMS 01">PMS 01</option>
+                        <option value="PMS 02">PMS 02</option>
+                        <option value="PMS 03">PMS 03</option>
+                        <option value="Site CDP">Site CDP</option>
+                        <option value="Site MDL">Site MDL</option>
+                        <option value="Site DAMCO">Site DAMCO</option>
+                        <option value="Site TM">Site TM</option>
+                        <option value="Site Kembangan">Site Kembangan</option>
+                        <option value="Vendor">Vendor</option>
+                    </select>
+                </div>
+
+                <div class="loader" id="loading"></div>
+                <button type="submit" class="btn btn-success">Kirim ke Spreadsheet</button>
+            </form>
+        </div>
+
+        <!-- TAB 2: BARCODE GENERATOR -->
+        <div id="tab-generator" class="content-area">
+            <div class="form-group">
+                <label>Pilih Jenis Tabung</label>
+                <select id="genType" class="form-control">
+                    <option value="SAM">Oxygen Samator</option>
+                    <option value="HB">Oxygen HB</option>
+                    <option value="LPG-B">LPG Biru 12kg</option>
+                    <option value="LPG-P">LPG Pink 12kg</option>
+                    <option value="LPG-50">LPG 50kg</option>
+                    <option value="ACY">Acetylene</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="generateAndDownload()">Generate & Download</button>
+
+            <div class="preview-box" id="previewBox" style="display:none;">
+                <img id="barcodeImg" class="barcode-img" src="" alt="Barcode">
+                <div style="font-weight:bold; margin-bottom:5px;" id="codeText"></div>
+                <a id="downloadBtn" class="download-link" target="_blank">Klik disini jika download otomatis gagal</a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // =========================================
+        // URL SCRIPT DIKUNCI (HARDCODE)
+        // =========================================
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyI2HsIpHjcCSUhrfKyTUqQmodyr5cMIcmjYE_OMcbP6cjr080arNQi8MgJDXRUpGI_lw/exec";
+        // =========================================
+
+        let html5QrcodeScanner = null;
+        let isCameraRunning = false;
+
+        // --- 1. LOGIKA UPLOAD FOTO ---
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length == 0) return;
+            const imageFile = e.target.files[0];
+            
+            // Menggunakan library untuk scan file gambar
+            html5QrcodeScanner.scanFile(imageFile, true)
+                .then(decodedText => {
+                    handleScanSuccess(decodedText); // Jalankan fungsi sukses
+                })
+                .catch(err => {
+                    console.error("Error scanning file", err);
+                    alert("Gagal membaca barcode pada foto tersebut.");
+                });
+        });
+
+        // --- 2. LOGIKA KAMERA LIVE ---
+        function startCamera() {
+            const readerContainer = document.getElementById('reader-container');
+            
+            if(!isCameraRunning) {
+                html5QrcodeScanner = new Html5Qrcode("reader");
+                const config = { fps: 10, qrbox: { width: 300, height: 200 } };
+                
+                html5QrcodeScanner.start({ facingMode: "environment" }, config, handleScanSuccess)
+                .then(() => {
+                    isCameraRunning = true;
+                    readerContainer.classList.add('active'); 
+                })
+                .catch(err => {
+                    console.error("Error Kamera:", err);
+                    alert("Gagal membuka kamera. Pastikan Anda menggunakan HTTPS. Gunakan tombol 'Upload Foto' sebagai alternatif.");
+                });
+            }
+        }
+
+        function stopCamera() {
+            if(html5QrcodeScanner && isCameraRunning) {
+                html5QrcodeScanner.stop().then(() => {
+                    isCameraRunning = false;
+                    document.getElementById('reader-container').classList.remove('active');
+                }).catch(err => console.error(err));
+            }
+        }
+
+        // --- 3. FUNGSI SAAT BERHASIL SCAN (DARI KAMERA ATAU FOTO) ---
+        function handleScanSuccess(decodedText, decodedResult) {
+            document.getElementById('barcode').value = decodedText;
+            identify(decodedText);
+            
+            stopCamera(); // Tutup scanner
+            
+            document.getElementById('mechanic').focus(); // Pindah fokus
+        }
+
+        // --- 4. BARCODE GENERATOR ---
+        async function generateAndDownload() {
+            const type = document.getElementById('genType').value;
+            const randomNum = Math.floor(10000 + Math.random() * 90000);
+            const code = `${type}-${randomNum}`;
+            
+            const apiUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${code}&scale=2&height=8&includeText=true`;
+            
+            const img = document.getElementById('barcodeImg');
+            const box = document.getElementById('previewBox');
+            const btn = document.getElementById('downloadBtn');
+            const txt = document.getElementById('codeText');
+
+            img.src = apiUrl;
+            txt.innerText = code;
+            box.style.display = 'block';
+
+            try {
+                const response = await fetch(apiUrl);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Barcode-${code}.png`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                alert("✅ Barcode " + code + " berhasil digenerate & didownload!");
+            } catch (err) {
+                alert("⚠️ Download otomatis diblokir browser.");
+                btn.href = apiUrl;
+                btn.setAttribute("download", `Barcode-${code}.png`);
+            }
+        }
+
+        // --- 5. FORM HANDLING ---
+        function switchTab(id) {
+            document.querySelectorAll('.content-area').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
+            document.getElementById('tab-'+id).classList.add('active');
+            document.querySelectorAll('.nav-tab')[id==='input'?0:1].classList.add('active');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            if(!SCRIPT_URL) { alert("Error: URL Script belum diset."); return; }
+
+            const data = {
+                timestamp: new Date().toLocaleString('id-ID'),
+                barcode: document.getElementById('barcode').value,
+                gasType: document.getElementById('gasType').value,
+                transType: document.getElementById('transType').value,
+                mechanic: document.getElementById('mechanic').value,
+                allocation: document.getElementById('allocation').value
+            };
+
+            showLoader(true);
+            
+            fetch(SCRIPT_URL, {
+                method: 'POST', mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                e.target.reset();
+                document.getElementById('barcode').value = "";
+                document.getElementById('gasType').value = "";
+                alert("✅ Data berhasil terkirim ke Spreadsheet Online!");
+            })
+            .catch(err => alert("Gagal kirim data: " + err))
+            .finally(() => showLoader(false));
+        }
+
+        function showLoader(show) { document.getElementById('loading').style.display = show ? 'block' : 'none'; }
+
+        // --- 6. IDENTIFY ---
+        function identify(code) {
+            const c = code.trim().toUpperCase();
+            const s = document.getElementById('gasType');
+            let type = null;
+            if(c.startsWith("SAM")) type = "Oxygen Samator";
+            else if(c.startsWith("HB")) type = "Oxygen HB";
+            else if(c.startsWith("LPG-B")) type = "LPG Biru 12kg";
+            else if(c.startsWith("LPG-P")) type = "LPG Pink 12kg";
+            else if(c.startsWith("LPG-50")) type = "LPG 50kg";
+            else if(c.startsWith("ACY")) type = "Acetylene";
+            
+            if(type) {
+                s.value = type;
+                s.style.borderColor = "var(--success)";
+                s.style.backgroundColor = "#d1fae5";
+            }
+        }
+    </script>
+</body>
+</html>
