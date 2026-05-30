@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Monitoring Tabung Barcode Scanner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- JsBarcode untuk generate barcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- Html5-Qrcode untuk scanning kamera -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom Scrollbar */
+        .sheet-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .sheet-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .sheet-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .sheet-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-indigo-600 rounded-lg text-white">
+                        <i class="fa-solid fa-gas-pump text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-extrabold text-lg tracking-wider text-indigo-400">OPERATIONAL STORAGE</span>
+                        <span class="text-xs block text-slate-300 -mt-1 font-semibold">Monitoring TABUNG</span>
+                    </div>
+                </div>
+                <div class="hidden md:flex space-x-1">
+                    <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition duration-200 bg-slate-800 text-white">
+                        <i class="fa-solid fa-chart-line mr-2"></i>Dashboard
+                    </button>
+                    <button onclick="switchTab('scanner')" id="btn-tab-scanner" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-barcode mr-2"></i>Scan Tabung
+                    </button>
+                    <button onclick="switchTab('generator')" id="btn-tab-generator" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition duration-200 text-slate-300 hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-print mr-2"></i>Cetak Barcode
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span id="sync-indicator" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-amber-500 animate-pulse"></span>Connecting...
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Navigation Bottom Bar -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-50 flex justify-around py-2">
+        <button onclick="switchTab('dashboard')" id="mob-tab-dashboard" class="flex flex-col items-center justify-center text-xs text-indigo-400 font-medium">
+            <i class="fa-solid fa-chart-line text-lg mb-1"></i>
+            <span>Dashboard</span>
+        </button>
+        <button onclick="switchTab('scanner')" id="mob-tab-scanner" class="flex flex-col items-center justify-center text-xs text-slate-400 font-medium">
+            <i class="fa-solid fa-barcode text-lg mb-1"></i>
+            <span>Scan</span>
+        </button>
+        <button onclick="switchTab('generator')" id="mob-tab-generator" class="flex flex-col items-center justify-center text-xs text-slate-400 font-medium">
+            <i class="fa-solid fa-print text-lg mb-1"></i>
+            <span>Barcode</span>
+        </button>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-16 md:mb-0">
+        
+        <!-- TAB 1: DASHBOARD VIEW -->
+        <div id="view-dashboard" class="tab-view space-y-6">
+            <!-- Summary Stats Grid -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <i class="fa-solid fa-arrow-down-long text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Permintaan</p>
+                        <h3 id="stat-permintaan" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i class="fa-solid fa-arrow-up-long text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Pengembalian</p>
+                        <h3 id="stat-pengeluaran" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-teal-50 text-teal-600 rounded-xl">
+                        <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tabung Aktif</p>
+                        <h3 id="stat-total-tabung" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-orange-50 text-orange-600 rounded-xl">
+                        <i class="fa-solid fa-clock-rotate-left text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sirkulasi Hari Ini</p>
+                        <h3 id="stat-hari-ini" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Charts section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Chart 1: Gas Distribution -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center">
+                        <i class="fa-solid fa-chart-bar text-indigo-500 mr-2"></i>
+                        Aktivitas Distribusi Tabung Berdasarkan Jenis
+                    </h3>
+                    <div class="h-80 relative">
+                        <canvas id="chartDistribution"></canvas>
+                    </div>
+                </div>
+                <!-- Chart 2: Quick Status Circle -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center">
+                        <i class="fa-solid fa-chart-pie text-indigo-500 mr-2"></i>
+                        Porsi Alokasi Terbanyak
+                    </h3>
+                    <div class="h-64 relative flex items-center justify-center">
+                        <canvas id="chartAllocation"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Log Feed -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-history text-indigo-500 mr-2"></i>
+                        Aktivitas Transaksi Terbaru
+                    </h3>
+                    <div class="flex space-x-2">
+                        <button onclick="showClearDataModal()" class="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center bg-rose-50 px-3 py-1.5 rounded-lg transition">
+                            <i class="fa-solid fa-trash-can mr-1.5"></i>Reset Data
+                        </button>
+                        <button onclick="exportToCSV()" class="text-xs font-bold text-emerald-600 hover:text-emerald-800 flex items-center bg-emerald-50 px-3 py-1.5 rounded-lg transition">
+                            <i class="fa-solid fa-download mr-1.5"></i>Ekspor CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-slate-400 text-xs uppercase font-semibold">
+                                <th class="py-3 px-4">Tanggal & Waktu</th>
+                                <th class="py-3 px-4">Tipe</th>
+                                <th class="py-3 px-4">Barcode / ID Tabung</th>
+                                <th class="py-3 px-4">Jenis Tabung</th>
+                                <th class="py-3 px-4">Mekanik</th>
+                                <th class="py-3 px-4">Alokasi</th>
+                                <th class="py-3 px-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-recent-tbody" class="text-sm divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="7" class="py-8 text-center text-slate-400">Memuat riwayat transaksi...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: SCANNER VIEW -->
+        <div id="view-scanner" class="tab-view hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Barcode Scanner Frame (Left column) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-7 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800 mb-2 flex items-center">
+                            <i class="fa-solid fa-qrcode text-indigo-500 mr-2"></i>
+                            Pindai Barcode Tabung Gas
+                        </h3>
+                        <p class="text-slate-500 text-xs mb-6">Posisikan barcode di depan kamera atau gunakan simulator input manual di bawah jika kamera tidak tersedia.</p>
+                        
+                        <!-- Camera Scan View Container -->
+                        <div class="relative w-full aspect-video bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center border-2 border-slate-800 mb-6">
+                            <div id="reader" class="w-full h-full"></div>
+                            <!-- Fallback/Overlay Message -->
+                            <div id="camera-loading" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center text-white p-4">
+                                <i class="fa-solid fa-camera text-4xl text-indigo-400 animate-pulse mb-3"></i>
+                                <span class="font-semibold text-sm">Kamera Belum Aktif</span>
+                                <p class="text-xs text-slate-400 text-center mt-1 max-w-xs">Klik tombol di bawah untuk mengaktifkan pemindaian langsung dari kamera hp atau komputer Anda.</p>
+                                <button onclick="startCamera()" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-semibold shadow-md transition">
+                                    Aktifkan Kamera
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Simulator & Manual Entry Input -->
+                    <div class="border-t border-slate-100 pt-6">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Simulasi Scan / Input ID Barcode</label>
+                        <div class="flex space-x-2">
+                            <div class="relative flex-grow">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="fa-solid fa-keyboard"></i>
+                                </span>
+                                <input type="text" id="manual-barcode" placeholder="Ketik barcode (contoh: OXY-SAM-1001)" class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <button onclick="simulateScan()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl shadow-md transition whitespace-nowrap">
+                                Scan Manual
+                            </button>
+                        </div>
+                        
+                        <!-- Mini Quick Simulator selection -->
+                        <div class="mt-4">
+                            <span class="text-xs text-slate-400 font-semibold block mb-2">Gunakan Barcode Terdaftar:</span>
+                            <div id="quick-sim-container" class="flex flex-wrap gap-2">
+                                <!-- Quick Select buttons loaded dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Entry (Right column) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-5 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-6">
+                            <h3 class="font-bold text-lg text-slate-800">Detail Transaksi Tabung</h3>
+                            <span id="scan-status-badge" class="px-2.5 py-1 text-xs rounded-full font-bold bg-slate-100 text-slate-500">
+                                Menunggu Scan...
+                            </span>
+                        </div>
+
+                        <!-- Scanned Result Card Details -->
+                        <div id="scanned-info-card" class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6 hidden">
+                            <div class="flex items-start space-x-3">
+                                <div id="scanned-gas-icon" class="p-2.5 rounded-lg text-white">
+                                    <i class="fa-solid fa-flask"></i>
+                                </div>
+                                <div class="flex-grow">
+                                    <span id="scanned-gas-label" class="text-xs font-extrabold uppercase tracking-wide">OXYGEN SAMATOR</span>
+                                    <h4 id="scanned-barcode-id" class="text-lg font-bold text-slate-800 -mt-0.5">OXY-SAM-001</h4>
+                                    
+                                    <!-- Cek & Validasi Status Terakhir (Fungsi Anti-Double Scan) -->
+                                    <div id="scanned-status-banner" class="mt-2 p-2 rounded-lg text-[11px] font-bold flex items-center space-x-1.5">
+                                        <!-- Diisi secara dinamis melalui JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Form Requirements -->
+                        <form id="transaction-form" class="space-y-4" onsubmit="submitTransaction(event)">
+                            <input type="hidden" id="form-barcode" required>
+                            <input type="hidden" id="form-cylinder-type" required>
+
+                            <!-- Kolom 1: Permintaan / Pengembalian -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipe Transaksi (Kolom 1)</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label id="label-permintaan" class="flex items-center justify-center py-3 px-4 border rounded-xl cursor-pointer text-sm font-semibold transition hover:bg-slate-50 border-slate-200">
+                                        <input type="radio" id="radio-permintaan" name="transaksi_tipe" value="Permintaan" class="sr-only" required onchange="handleTypeChange(this)">
+                                        <span class="flex items-center text-slate-700">
+                                            <i class="fa-solid fa-arrow-down-long text-blue-500 mr-2"></i>Permintaan
+                                        </span>
+                                    </label>
+                                    <label id="label-pengembalian" class="flex items-center justify-center py-3 px-4 border rounded-xl cursor-pointer text-sm font-semibold transition hover:bg-slate-50 border-slate-200">
+                                        <input type="radio" id="radio-pengembalian" name="transaksi_tipe" value="Pengembalian" class="sr-only" required onchange="handleTypeChange(this)">
+                                        <span class="flex items-center text-slate-700">
+                                            <i class="fa-solid fa-arrow-up-long text-indigo-500 mr-2"></i>Pengembalian
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Kolom 2: Nama Mekanik -->
+                            <div>
+                                <label for="form-mechanic" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Mekanik (Kolom 2)</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                        <i class="fa-solid fa-user-gear"></i>
+                                    </span>
+                                    <input type="text" id="form-mechanic" placeholder="Masukkan nama mekanik" class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                </div>
+                            </div>
+
+                            <!-- Kolom 3: Alokasi -->
+                            <div>
+                                <label for="form-allocation" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Alokasi (Kolom 3)</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                    </span>
+                                    <select id="form-allocation" class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white" required>
+                                        <option value="" disabled selected>Pilih Alokasi Site</option>
+                                        <option value="Reguler">1. Reguler</option>
+                                        <option value="Storing">2. Storing</option>
+                                        <option value="PMS 01">3. PMS 01</option>
+                                        <option value="PMS 02">4. PMS 02</option>
+                                        <option value="PMS 03">5. PMS 03</option>
+                                        <option value="Site CDP">6. Site CDP</option>
+                                        <option value="Site MDL">7. Site MDL</option>
+                                        <option value="Site DAMCO">8. Site DAMCO</option>
+                                        <option value="Site TM">9. Site TM</option>
+                                        <option value="Site Kembangan">10. Site Kembangan</option>
+                                        <option value="Vendor">11. Vendor</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Tanggal & Hari Input -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Tanggal Input Otomatis</label>
+                                <div id="auto-date-display" class="bg-slate-100 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 flex items-center justify-between">
+                                    <span><i class="fa-regular fa-calendar-days mr-2"></i><span id="live-date">Memuat tanggal...</span></span>
+                                    <span class="text-indigo-600 font-bold bg-white px-2 py-0.5 rounded shadow-sm text-[10px]" id="live-day">HARI</span>
+                                </div>
+                            </div>
+
+                            <!-- TOGGLE MULTI SCAN MODE (Penting untuk scan beruntun) -->
+                            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex items-center justify-between">
+                                <div class="flex items-center space-x-2.5">
+                                    <div class="p-1.5 bg-indigo-500 text-white rounded-lg text-xs">
+                                        <i class="fa-solid fa-arrows-spin animate-spin-slow"></i>
+                                    </div>
+                                    <div>
+                                        <label for="keep-metadata-toggle" class="text-xs font-bold text-slate-700 block">Mode Multi-Scan</label>
+                                        <span class="text-[10px] text-slate-500 block">Kunci nama mekanik & alokasi untuk scan beruntun</span>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="keep-metadata-toggle" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+
+                            <button type="submit" id="btn-submit-form" disabled class="w-full mt-4 py-3 bg-slate-200 text-slate-400 font-bold rounded-xl text-sm transition duration-200 cursor-not-allowed">
+                                <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Kirim & Catat Transaksi
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: BARCODE GENERATOR & MANAGER -->
+        <div id="view-generator" class="tab-view hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Barcode Maker input -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800 mb-2 flex items-center">
+                            <i class="fa-solid fa-plus-circle text-indigo-500 mr-2"></i>
+                            Daftarkan & Cetak Barcode Baru
+                        </h3>
+                        <p class="text-slate-500 text-xs mb-6">Buat kode barcode unik yang siap ditempelkan pada fisik tabung gas.</p>
+
+                        <form id="generator-form" class="space-y-4" onsubmit="generateBarcodeSubmit(event)">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Pilih Jenis Tabung</label>
+                                <select id="gen-cylinder-type" onchange="suggestBarcodeCode()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                    <option value="" disabled selected>Pilih Jenis</option>
+                                    <option value="samator">Oxygen Samator</option>
+                                    <option value="hb">Oxygen HB</option>
+                                    <option value="lpg_12_biru">LPG Biru 12kg</option>
+                                    <option value="lpg_12_pink">LPG Pink 12kg</option>
+                                    <option value="lpg_50">LPG 50kg</option>
+                                    <option value="acetylene">Acetylene</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nomor Unik / Serial Tabung</label>
+                                <input type="text" id="gen-serial" placeholder="Ketik nomor seri, misal: 1004" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                <p class="text-[10px] text-indigo-500 mt-1 font-semibold">Catatan: Setiap jenis tabung memiliki format prefix unik.</p>
+                            </div>
+
+                            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md">
+                                <i class="fa-solid fa-barcode mr-2"></i>Generate Barcode
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Visual Preview Container -->
+                    <div id="barcode-preview-container" class="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl hidden text-center">
+                        <span class="text-[10px] uppercase font-extrabold text-slate-400 block mb-2">Pratinjau Hasil Cetak</span>
+                        <div class="bg-white p-3 rounded-lg border inline-block">
+                            <!-- Canvas element to support direct download binarizing -->
+                            <canvas id="barcode-preview-img" class="mx-auto"></canvas>
+                        </div>
+                        <div class="mt-3 flex justify-center space-x-2">
+                            <button onclick="printGeneratedBarcode()" class="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700">
+                                <i class="fa-solid fa-print mr-1"></i>Cetak
+                            </button>
+                            <button onclick="downloadGeneratedBarcode()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition">
+                                <i class="fa-solid fa-download mr-1"></i>Unduh
+                            </button>
+                            <button onclick="saveAndRegisterCylinder()" class="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700">
+                                <i class="fa-solid fa-save mr-1"></i>Simpan Ke Sistem
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registered Cylinder List -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2">
+                    <h3 class="font-bold text-lg text-slate-800 mb-2 flex items-center justify-between">
+                        <span><i class="fa-solid fa-list-check text-indigo-500 mr-2"></i>Daftar Tabung Terdaftar</span>
+                        <span id="total-cylinders-badge" class="px-2.5 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">0 Tabung</span>
+                    </h3>
+                    <p class="text-slate-500 text-xs mb-4">Gunakan daftar ini untuk melihat inventarisasi tabung fisik aktif yang siap ditempel kode.</p>
+                    
+                    <div class="overflow-y-auto max-h-[420px] pr-2 sheet-scrollbar">
+                        <div id="cylinder-list-container" class="space-y-3">
+                            <div class="text-center py-12 text-slate-400">Sedang memuat daftar tabung...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Custom Dialog Modal -->
+    <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center flex flex-col items-center">
+            <div id="modal-icon-container" class="p-4 bg-green-50 text-green-500 rounded-full mb-4">
+                <i id="modal-icon" class="fa-solid fa-circle-check text-4xl"></i>
+            </div>
+            <h3 id="modal-title" class="text-lg font-bold text-slate-800">Berhasil!</h3>
+            <p id="modal-msg" class="text-xs text-slate-500 mt-2 mb-6">Pesan pemberitahuan sistem akan dipasang disini.</p>
+            <button onclick="closeModal()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl transition">
+                Tutup
+            </button>
+        </div>
+    </div>
+
+    <!-- Clear Database Confirmation Modal -->
+    <div id="clear-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center flex flex-col items-center">
+            <div class="p-4 bg-rose-50 text-rose-500 rounded-full mb-4">
+                <i class="fa-solid fa-triangle-exclamation text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">Bersihkan Semua Data Lokal?</h3>
+            <p class="text-xs text-slate-500 mt-2 mb-6">Tindakan ini hanya akan menghapus semua catatan riwayat transaksi dan tabung lokal di perangkat Anda. Data di Google Sheets asli Anda tidak akan terhapus.</p>
+            <div class="flex space-x-2 w-full">
+                <button onclick="closeClearModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+                    Batal
+                </button>
+                <button onclick="clearAllSystemData()" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition">
+                    Ya, Hapus Semua
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Printable Barcode Box (Invisible on UI, Visible on Print Mode) -->
+    <div id="print-area" class="hidden">
+        <div style="text-align: center; padding: 20px; font-family: sans-serif;">
+            <h4 id="print-title" style="margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase;">OXYGEN SAMATOR</h4>
+            <svg id="print-svg"></svg>
+        </div>
+    </div>
+
+    <!-- Script Module for Firebase and Business Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ========================================================================
+        // KONFIGURASI GOOGLE SPREADSHEET & APPS SCRIPT
+        // ========================================================================
+        
+        // 1. Masukkan URL Web App (Google Apps Script) Anda di sini. 
+        // Ini memastikan data form otomatis terkirim tanpa lewat tampilan aplikasi.
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx0wLTLN2IrbHkze1XM7yGrdz_Ft_LtQnFv984I_wfOcE8JC_ryXJhjOtsxf8VXapZW/exec"; 
+
+        // 2. Setup ID Spreadsheet untuk fitur tarik data historis
+        const SHEET_ID = '1O8Y_hFChL0ne1UsqLugiI20_gSKYxr9VC3LV-9ulNv8';
+        const SHEET_GID = '1250422562';
+        
+        // ========================================================================
+
+        // Constants and Configurations
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'samator-oxy-lpg-monitor-v2';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "dummy-key",
+            authDomain: "dummy.firebaseapp.com",
+            projectId: "dummy-project",
+            storageBucket: "dummy.appspot.com",
+            messagingSenderId: "12345",
+            appId: "1:12345:web:12345"
+        };
+
+        // Initialize Firebase
+        let app, db, auth;
+        let isFirebaseActive = false;
+        
+        // Local fallback data storage if Firebase dummy
+        let localTransactions = [];
+        let localCylinders = [];
+
+        // UI State Variables
+        let currentTab = 'dashboard';
+        let charts = {};
+        let cameraScanner = null;
+
+        // Metadata of Cylinder types for configuration
+        const CYLINDER_TYPES = {
+            'samator': { label: 'Oxygen Samator', prefix: 'OXY-SAM', color: 'bg-blue-600', text: 'text-blue-600', icon: 'fa-lungs' },
+            'hb': { label: 'Oxygen HB', prefix: 'OXY-HB', color: 'bg-cyan-500', text: 'text-cyan-500', icon: 'fa-heart-pulse' },
+            'lpg_12_biru': { label: 'LPG Biru 12kg', prefix: 'LPG-BLU-12', color: 'bg-indigo-600', text: 'text-indigo-600', icon: 'fa-fire' },
+            'lpg_12_pink': { label: 'LPG Pink 12kg', prefix: 'LPG-PNK-12', color: 'bg-pink-500', text: 'text-pink-500', icon: 'fa-fire-burner' },
+            'lpg_50': { label: 'LPG 50kg', prefix: 'LPG-50', color: 'bg-slate-700', text: 'text-slate-700', icon: 'fa-weight-hanging' },
+            'acetylene': { label: 'Acetylene', prefix: 'ACE', color: 'bg-orange-600', text: 'text-orange-600', icon: 'fa-triangle-exclamation' }
+        };
+
+        async function startFirebaseConnection() {
+            const syncEl = document.getElementById('sync-indicator');
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Authenticate anonymously
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        isFirebaseActive = true;
+                        syncEl.innerHTML = '<span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-500"></span>Terhubung ke Cloud';
+                        syncEl.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+                        listenToRealtimeData();
+                    } else {
+                        setLocalMockMode();
+                    }
+                });
+            } catch (err) {
+                console.warn("Firebase Init fallback to Local Storage Mode:", err);
+                setLocalMockMode();
+            }
+        }
+
+        // Setup local fallback with comprehensive demo data
+        function setLocalMockMode() {
+            isFirebaseActive = false;
+            const syncEl = document.getElementById('sync-indicator');
+            syncEl.innerHTML = '<span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-indigo-500"></span>PANCARAN DARAT TRANSPORT';
+            syncEl.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/15 text-indigo-400 border border-indigo-500/30";
+            
+            // Load from LocalStorage if exists, else load dummy data
+            const storedTrans = localStorage.getItem('offline_transactions');
+            const storedCyls = localStorage.getItem('offline_cylinders');
+
+            if (storedTrans) {
+                localTransactions = JSON.parse(storedTrans);
+            } else {
+                localTransactions = getInitialMockTransactions();
+                saveLocalData('offline_transactions', localTransactions);
+            }
+
+            if (storedCyls) {
+                localCylinders = JSON.parse(storedCyls);
+            } else {
+                localCylinders = getInitialMockCylinders();
+                saveLocalData('offline_cylinders', localCylinders);
+            }
+
+            // Pull live from Google Sheets
+            fetchGoogleSheetData();
+        }
+
+        function saveLocalData(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        function getInitialMockCylinders() {
+            return [
+                { id: 'OXY-SAM-1001', type: 'samator', registeredAt: '2026-05-18' },
+                { id: 'OXY-SAM-1002', type: 'samator', registeredAt: '2026-05-18' },
+                { id: 'OXY-HB-2001', type: 'hb', registeredAt: '2026-05-18' },
+                { id: 'LPG-BLU-12-3001', type: 'lpg_12_biru', registeredAt: '2026-05-19' },
+                { id: 'LPG-PNK-12-4001', type: 'lpg_12_pink', registeredAt: '2026-05-19' },
+                { id: 'LPG-50-5001', type: 'lpg_50', registeredAt: '2026-05-19' },
+                { id: 'ACE-6001', type: 'acetylene', registeredAt: '2026-05-19' }
+            ];
+        }
+
+        function getInitialMockTransactions() {
+            return [
+                { id: 'TX-1', type: 'Permintaan', mechanic: 'Budi Santoso', allocation: 'Reguler', date: '2026-05-19', day: 'Selasa', barcode: 'OXY-SAM-1001', cylinderType: 'samator', timestamp: Date.now() - 36000000 },
+                { id: 'TX-2', type: 'Pengembalian', mechanic: 'Rian Hidayat', allocation: 'Site CDP', date: '2026-05-19', day: 'Selasa', barcode: 'LPG-BLU-12-3001', cylinderType: 'lpg_12_biru', timestamp: Date.now() - 18000000 },
+                { id: 'TX-3', type: 'Permintaan', mechanic: 'Asep Saepudin', allocation: 'PMS 01', date: '2026-05-20', day: 'Rabu', barcode: 'ACE-6001', cylinderType: 'acetylene', timestamp: Date.now() - 7200000 }
+            ];
+        }
+
+        async function fetchGoogleSheetData() {
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Gagal memuat URL");
+                const csvDataText = await response.text();
+
+                parseAndMergeGoogleSheetCSV(csvDataText);
+            } catch (err) {
+                console.error("Gagal melakukan penarikan data Google Sheets:", err);
+            }
+        }
+
+        function parseAndMergeGoogleSheetCSV(csvText) {
+            const rows = csvText.split('\n').map(row => {
+                let parts = [];
+                let p = '';
+                let q = false;
+                for (let i = 0; i < row.length; i++) {
+                    let c = row[i];
+                    if (c === '"') { q = !q; }
+                    else if (c === ',' && !q) { parts.push(p.trim()); p = ''; }
+                    else { p += c; }
+                }
+                parts.push(p.trim());
+                return parts;
+            });
+
+            if (rows.length <= 1) return;
+
+            const headers = rows[0].map(h => h.toLowerCase());
+            
+            const colType = headers.findIndex(h => h.includes('tipe') || h.includes('kolom 1'));
+            const colMechanic = headers.findIndex(h => h.includes('mekanik') || h.includes('kolom 2') || h.includes('nama'));
+            const colAllocation = headers.findIndex(h => h.includes('alokasi') || h.includes('kolom 3') || h.includes('site'));
+            const colBarcode = headers.findIndex(h => h.includes('barcode') || h.includes('id'));
+            const colDate = headers.findIndex(h => h.includes('tanggal') || h.includes('date'));
+            const colDay = headers.findIndex(h => h.includes('hari') || h.includes('day'));
+
+            const importedTransactions = [];
+
+            for (let i = 1; i < rows.length; i++) {
+                const r = rows[i];
+                if (r.length < 4 || r.every(cell => cell === '')) continue;
+
+                let type = r[colType !== -1 ? colType : 1] || 'Permintaan';
+                // Handle legacy "Pengeluaran" to map to "Pengembalian"
+                if (type.trim().toLowerCase() === 'pengeluaran') {
+                    type = 'Pengembalian';
+                }
+                const mechanic = r[colMechanic !== -1 ? colMechanic : 2] || 'Mekanik';
+                const allocation = r[colAllocation !== -1 ? colAllocation : 3] || 'Reguler';
+                const barcode = r[colBarcode !== -1 ? colBarcode : 5] || '';
+                const date = r[colDate !== -1 ? colDate : 6] || getFormattedDate();
+                const day = r[colDay !== -1 ? colDay : 7] || getCurrentDayIndonesian();
+
+                if (!barcode) continue;
+
+                const detectedType = detectCylinderTypeByBarcode(barcode);
+
+                importedTransactions.push({
+                    id: `TX-IMPORTED-${i}-${Date.now()}`,
+                    type: type,
+                    mechanic: mechanic,
+                    allocation: allocation,
+                    barcode: barcode,
+                    cylinderType: detectedType,
+                    date: date,
+                    day: day,
+                    timestamp: Date.now() - (i * 60000)
+                });
+
+                if (!localCylinders.some(c => c.id.toUpperCase() === barcode.toUpperCase())) {
+                    localCylinders.push({
+                        id: barcode,
+                        type: detectedType,
+                        registeredAt: date
+                    });
+                }
+            }
+
+            if (importedTransactions.length > 0) {
+                localTransactions = importedTransactions;
+                saveLocalData('offline_transactions', localTransactions);
+                saveLocalData('offline_cylinders', localCylinders);
+                updateUIPanels();
+            }
+        }
+
+        function detectCylinderTypeByBarcode(barcode) {
+            const up = barcode.toUpperCase();
+            if (up.startsWith('OXY-SAM')) return 'samator';
+            if (up.startsWith('OXY-HB')) return 'hb';
+            if (up.startsWith('LPG-BLU')) return 'lpg_12_biru';
+            if (up.startsWith('LPG-PNK')) return 'lpg_12_pink';
+            if (up.startsWith('LPG-50')) return 'lpg_50';
+            if (up.startsWith('ACE')) return 'acetylene';
+            return 'samator';
+        }
+
+        function listenToRealtimeData() {
+            if (!isFirebaseActive) return;
+
+            const collectionTrans = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+            const collectionCyls = collection(db, 'artifacts', appId, 'public', 'data', 'cylinders');
+
+            onSnapshot(collectionTrans, (snapshot) => {
+                localTransactions = [];
+                snapshot.forEach((doc) => {
+                    localTransactions.push({ id: doc.id, ...doc.data() });
+                });
+                updateUIPanels();
+            }, (error) => {
+                console.error("Firestore loading transactions failed:", error);
+            });
+
+            onSnapshot(collectionCyls, (snapshot) => {
+                localCylinders = [];
+                snapshot.forEach((doc) => {
+                    localCylinders.push({ id: doc.id, ...doc.data() });
+                });
+                updateUIPanels();
+            }, (error) => {
+                console.error("Firestore loading cylinders failed:", error);
+            });
+        }
+
+        window.switchTab = function(tabName) {
+            currentTab = tabName;
+            
+            document.querySelectorAll('.tab-view').forEach(view => {
+                view.classList.add('hidden');
+            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-white');
+                btn.classList.add('text-slate-300', 'hover:bg-slate-800', 'hover:text-white');
+            });
+            
+            const activeBtn = document.getElementById(`btn-tab-${tabName}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800', 'hover:text-white');
+                activeBtn.classList.add('bg-slate-800', 'text-white');
+            }
+
+            document.querySelectorAll('[id^="mob-tab-"]').forEach(btn => {
+                btn.classList.remove('text-indigo-400');
+                btn.classList.add('text-slate-400');
+            });
+            const mobActiveBtn = document.getElementById(`mob-tab-${tabName}`);
+            if (mobActiveBtn) {
+                mobActiveBtn.classList.remove('text-slate-400');
+                mobActiveBtn.classList.add('text-indigo-400');
+            }
+
+            if (tabName !== 'scanner' && cameraScanner) {
+                stopCamera();
+            }
+
+            updateUIPanels();
+        };
+
+        function updateUIPanels() {
+            renderDashboardStats();
+            renderDashboardRecent();
+            renderCylinderGrid();
+            renderQuickSimulationButtons();
+            renderCharts();
+        }
+
+        function renderDashboardStats() {
+            const permintaanCount = localTransactions.filter(t => t.type === 'Permintaan').length;
+            const pengeluaranCount = localTransactions.filter(t => t.type === 'Pengembalian' || t.type === 'Pengeluaran').length;
+            
+            const todayStr = getFormattedDate();
+            const todayCount = localTransactions.filter(t => t.date === todayStr).length;
+
+            document.getElementById('stat-permintaan').innerText = permintaanCount;
+            document.getElementById('stat-pengeluaran').innerText = pengeluaranCount;
+            document.getElementById('stat-total-tabung').innerText = localCylinders.length;
+            document.getElementById('stat-hari-ini').innerText = todayCount;
+            document.getElementById('total-cylinders-badge').innerText = `${localCylinders.length} Tabung`;
+        }
+
+        function renderDashboardRecent() {
+            const tbody = document.getElementById('dashboard-recent-tbody');
+            tbody.innerHTML = '';
+
+            const sorted = [...localTransactions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-semibold">Belum ada transaksi terekam</td></tr>`;
+                return;
+            }
+
+            sorted.forEach(tx => {
+                const gasInfo = CYLINDER_TYPES[tx.cylinderType] || { label: 'Unknown', color: 'bg-slate-400' };
+                const timeStr = new Date(tx.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const typeColor = tx.type === 'Permintaan' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-semibold text-slate-700">${tx.date} (${timeStr})</td>
+                        <td class="py-3 px-4">
+                            <span class="px-2.5 py-1 text-xs font-bold rounded-lg ${typeColor}">${tx.type}</span>
+                        </td>
+                        <td class="py-3 px-4 font-mono font-bold text-slate-800">${tx.barcode}</td>
+                        <td class="py-3 px-4 flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full ${gasInfo.color}"></span>
+                            <span class="font-medium text-slate-600">${gasInfo.label}</span>
+                        </td>
+                        <td class="py-3 px-4 text-slate-600 font-semibold">${tx.mechanic}</td>
+                        <td class="py-3 px-4 font-medium"><span class="bg-slate-100 px-2 py-1 rounded text-xs text-slate-600">${tx.allocation}</span></td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="deleteTransaction('${tx.id}')" class="text-rose-600 hover:text-rose-800 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Hapus">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderCylinderGrid() {
+            const container = document.getElementById('cylinder-list-container');
+            container.innerHTML = '';
+
+            if (localCylinders.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-slate-400">Belum ada tabung terdaftar. Daftarkan di panel kiri.</div>`;
+                return;
+            }
+
+            localCylinders.forEach(cyl => {
+                const info = CYLINDER_TYPES[cyl.type] || { label: 'Unknown', color: 'bg-slate-400', icon: 'fa-box' };
+                const currentStatus = getCylinderCurrentStatus(cyl.id);
+                const statusBadge = currentStatus === 'Permintaan' 
+                    ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">Terpakai</span>`
+                    : `<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">Di Gudang</span>`;
+                
+                container.innerHTML += `
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 flex items-center justify-between hover:shadow-sm transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2.5 ${info.color} text-white rounded-lg">
+                                <i class="fa-solid ${info.icon} text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h4 class="font-bold text-slate-800">${cyl.id}</h4>
+                                    ${statusBadge}
+                                </div>
+                                <span class="text-xs text-slate-500 font-semibold block">${info.label}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="printAndSetPreview('${cyl.id}', '${cyl.type}')" class="p-2 text-indigo-600 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg transition" title="Cetak Barcode">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                            <button onclick="downloadCylinderBarcode('${cyl.id}')" class="p-2 text-blue-600 bg-white hover:bg-indigo-50 border border-slate-200 rounded-lg transition" title="Unduh Barcode (PNG)">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <button onclick="deleteCylinder('${cyl.id}')" class="p-2 text-rose-600 bg-white hover:bg-rose-50 border border-slate-200 rounded-lg transition" title="Hapus Tabung">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderQuickSimulationButtons() {
+            const container = document.getElementById('quick-sim-container');
+            container.innerHTML = '';
+
+            if (localCylinders.length === 0) {
+                container.innerHTML = `<span class="text-xs text-rose-500 font-semibold italic">Silakan hubungkan atau generate barcode tabung terlebih dahulu.</span>`;
+                return;
+            }
+
+            localCylinders.slice(0, 6).forEach(cyl => {
+                const info = CYLINDER_TYPES[cyl.type] || { label: 'Unknown' };
+                container.innerHTML += `
+                    <button type="button" onclick="triggerQuickScan('${cyl.id}')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200/55 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-barcode text-[10px]"></i>
+                        <span>${cyl.id} (${info.label})</span>
+                    </button>
+                `;
+            });
+        }
+
+        window.suggestBarcodeCode = function() {
+            const type = document.getElementById('gen-cylinder-type').value;
+            if (!type) return;
+
+            const info = CYLINDER_TYPES[type];
+            const filterSameType = localCylinders.filter(c => c.type === type);
+            
+            let nextNum = 1001;
+            if (filterSameType.length > 0) {
+                const serials = filterSameType.map(c => {
+                    const parts = c.id.split('-');
+                    const num = parseInt(parts[parts.length - 1]);
+                    return isNaN(num) ? 0 : num;
+                });
+                nextNum = Math.max(...serials) + 1;
+            }
+            
+            document.getElementById('gen-serial').value = nextNum;
+        };
+
+        window.generateBarcodeSubmit = function(e) {
+            e.preventDefault();
+            const type = document.getElementById('gen-cylinder-type').value;
+            const serial = document.getElementById('gen-serial').value;
+            const info = CYLINDER_TYPES[type];
+
+            const barcodeValue = `${info.prefix}-${serial}`;
+
+            if (localCylinders.some(c => c.id === barcodeValue)) {
+                showModal('Kesalahan', `Barcode ${barcodeValue} sudah terdaftar dalam sistem!`, 'error');
+                return;
+            }
+
+            JsBarcode("#barcode-preview-img", barcodeValue, {
+                format: "CODE128",
+                width: 2,
+                height: 50,
+                displayValue: true,
+                fontSize: 14
+            });
+
+            document.getElementById('barcode-preview-container').classList.remove('hidden');
+            const form = document.getElementById('generator-form');
+            form.dataset.tempBarcode = barcodeValue;
+            form.dataset.tempType = type;
+        };
+
+        window.downloadGeneratedBarcode = function() {
+            const canvas = document.getElementById('barcode-preview-img');
+            const form = document.getElementById('generator-form');
+            const barcode = form.dataset.tempBarcode || 'barcode';
+            if (!canvas) return;
+
+            const link = document.createElement('a');
+            link.download = `barcode_${barcode}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.downloadCylinderBarcode = function(barcode) {
+            const tempCanvas = document.createElement('canvas');
+            JsBarcode(tempCanvas, barcode, {
+                format: "CODE128",
+                width: 2,
+                height: 50,
+                displayValue: true,
+                fontSize: 14
+            });
+
+            const link = document.createElement('a');
+            link.download = `barcode_${barcode}.png`;
+            link.href = tempCanvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.saveAndRegisterCylinder = async function() {
+            const form = document.getElementById('generator-form');
+            const barcode = form.dataset.tempBarcode;
+            const type = form.dataset.tempType;
+
+            if (!barcode || !type) return;
+
+            const newCylObj = {
+                id: barcode,
+                type: type,
+                registeredAt: getFormattedDate()
+            };
+
+            if (isFirebaseActive) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cylinders', barcode), newCylObj);
+                    showModal('Terdaftar!', `Tabung ${barcode} berhasil disimpan ke cloud database.`, 'success');
+                } catch (err) {
+                    console.error("Save cylinder failed:", err);
+                }
+            } else {
+                localCylinders.push(newCylObj);
+                saveLocalData('offline_cylinders', localCylinders);
+                updateUIPanels();
+                showModal('Berhasil!', `Tabung ${barcode} disimpan secara lokal.`, 'success');
+            }
+
+            document.getElementById('barcode-preview-container').classList.add('hidden');
+            form.reset();
+        };
+
+        window.printAndSetPreview = function(barcode, type) {
+            const info = CYLINDER_TYPES[type];
+            document.getElementById('print-title').innerText = info.label;
+            
+            JsBarcode("#print-svg", barcode, {
+                format: "CODE128",
+                width: 2.5,
+                height: 70,
+                displayValue: true,
+                fontSize: 16
+            });
+
+            const printContent = document.getElementById('print-area').innerHTML;
+            const printWindow = window.open('', '_blank', 'height=400,width=600');
+            printWindow.document.write('<html><head><title>Print Barcode</title></head><body style="display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">');
+            printWindow.document.write(printContent);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        };
+
+        window.printGeneratedBarcode = function() {
+            const form = document.getElementById('generator-form');
+            const barcode = form.dataset.tempBarcode;
+            const type = form.dataset.tempType;
+            if (barcode && type) {
+                printAndSetPreview(barcode, type);
+            }
+        };
+
+        window.startCamera = function() {
+            document.getElementById('camera-loading').classList.add('hidden');
+            
+            cameraScanner = new Html5Qrcode("reader");
+            const config = { fps: 15, qrbox: { width: 280, height: 130 } };
+
+            cameraScanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).catch(err => {
+                console.error("Gagal memulai kamera:", err);
+                showModal('Kesalahan Kamera', 'Gagal mengakses kamera perangkat Anda. Pastikan izin kamera aktif.', 'error');
+                document.getElementById('camera-loading').classList.remove('hidden');
+            });
+        };
+
+        window.stopCamera = function() {
+            if (cameraScanner) {
+                cameraScanner.stop().then(() => {
+                    cameraScanner = null;
+                    document.getElementById('camera-loading').classList.remove('hidden');
+                }).catch(err => console.error("Gagal stop kamera:", err));
+            }
+        };
+
+        function onScanSuccess(decodedText, decodedResult) {
+            try {
+                const context = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = context.createOscillator();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(1000, context.currentTime);
+                oscillator.connect(context.destination);
+                oscillator.start();
+                oscillator.stop(context.currentTime + 0.1);
+            } catch(e){}
+
+            processScannedBarcode(decodedText);
+        }
+
+        function onScanFailure(error) {}
+
+        window.simulateScan = function() {
+            const input = document.getElementById('manual-barcode');
+            const code = input.value.trim();
+            if (!code) return;
+
+            processScannedBarcode(code);
+            input.value = '';
+        };
+
+        window.triggerQuickScan = function(barcode) {
+            processScannedBarcode(barcode);
+        };
+
+        // Fungsi Deteksi Status Terakhir Tabung (Anti Double-Scan)
+        function getCylinderCurrentStatus(barcode) {
+            // Filter semua transaksi dari log yang memiliki barcode ini
+            const txs = localTransactions.filter(t => t.barcode.toUpperCase() === barcode.toUpperCase());
+            if (txs.length === 0) {
+                return 'Di Gudang'; // Default tabung baru terdaftar
+            }
+            // Sort transaksi berdasarkan timestamp terbaru ke terlama
+            const sorted = txs.sort((a, b) => b.timestamp - a.timestamp);
+            return sorted[0].type; // Mengembalikan 'Permintaan' atau 'Pengembalian'
+        }
+
+        function processScannedBarcode(barcode) {
+            const matchCyl = localCylinders.find(c => c.id.toUpperCase() === barcode.toUpperCase());
+
+            const badge = document.getElementById('scan-status-badge');
+            const infoCard = document.getElementById('scanned-info-card');
+            const btnSubmit = document.getElementById('btn-submit-form');
+            const statusBanner = document.getElementById('scanned-status-banner');
+
+            const radioPermintaan = document.getElementById('radio-permintaan');
+            const radioPengembalian = document.getElementById('radio-pengembalian');
+            const labelPermintaan = document.getElementById('label-permintaan');
+            const labelPengembalian = document.getElementById('label-pengembalian');
+
+            if (!matchCyl) {
+                badge.innerText = "Tidak Dikenali";
+                badge.className = "px-2.5 py-1 text-xs rounded-full font-bold bg-rose-100 text-rose-600";
+                
+                infoCard.classList.remove('hidden');
+                document.getElementById('scanned-gas-icon').className = "p-2.5 rounded-lg text-white bg-slate-500";
+                document.getElementById('scanned-gas-label').innerText = "JENIS TIDAK DIKETAHUI";
+                document.getElementById('scanned-barcode-id').innerText = barcode;
+                
+                statusBanner.className = "mt-2 p-2 rounded-lg text-[11px] font-bold bg-rose-50 text-rose-600 flex items-center space-x-1.5";
+                statusBanner.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>Tabung tidak terdaftar! Silakan buat barcode terlebih dahulu.</span>`;
+
+                btnSubmit.disabled = true;
+                btnSubmit.className = "w-full mt-4 py-3 bg-slate-200 text-slate-400 font-bold rounded-xl text-sm transition cursor-not-allowed";
+                
+                showModal('Scan Gagal', `Barcode ${barcode} tidak terdaftar di database sistem kami. Silakan daftarkan terlebih dahulu.`, 'error');
+                return;
+            }
+
+            const info = CYLINDER_TYPES[matchCyl.type];
+            badge.innerText = "Sukses Dibaca";
+            badge.className = "px-2.5 py-1 text-xs rounded-full font-bold bg-emerald-100 text-emerald-600";
+
+            infoCard.classList.remove('hidden');
+            document.getElementById('scanned-gas-icon').className = `p-2.5 rounded-lg text-white ${info.color}`;
+            document.getElementById('scanned-gas-label').innerText = info.label;
+            document.getElementById('scanned-barcode-id').innerText = matchCyl.id;
+
+            document.getElementById('form-barcode').value = matchCyl.id;
+            document.getElementById('form-cylinder-type').value = matchCyl.type;
+
+            // ==========================================
+            // LOGIKA VALIDASI ALUR: ANTI DOUBLE SCAN
+            // ==========================================
+            const lastStatus = getCylinderCurrentStatus(matchCyl.id);
+
+            // Reset status disables & visual classes
+            radioPermintaan.disabled = false;
+            radioPengembalian.disabled = false;
+            labelPermintaan.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+            labelPengembalian.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+
+            if (lastStatus === 'Permintaan') {
+                // Tabung sedang berada di luar (Mekanik sedang bawa) -> Hanya boleh Pengembalian
+                statusBanner.className = "mt-2 p-2 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 flex items-center space-x-1.5";
+                statusBanner.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> <span>Status: Sedang di luar (Harus proses Pengembalian)</span>`;
+                
+                // Kunci & arahkan paksa ke opsi Pengembalian
+                radioPengembalian.checked = true;
+                radioPermintaan.disabled = true;
+                labelPermintaan.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                
+                // Jalankan perubahan visual radio
+                handleTypeChange(radioPengembalian);
+            } else {
+                // Tabung aman di gudang (Tersedia / habis Pengembalian) -> Hanya boleh Permintaan
+                statusBanner.className = "mt-2 p-2 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 flex items-center space-x-1.5";
+                statusBanner.innerHTML = `<i class="fa-solid fa-warehouse"></i> <span>Status: Di Gudang (Tersedia untuk Permintaan)</span>`;
+                
+                // Kunci & arahkan paksa ke opsi Permintaan
+                radioPermintaan.checked = true;
+                radioPengembalian.disabled = true;
+                labelPengembalian.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+
+                // Jalankan perubahan visual radio
+                handleTypeChange(radioPermintaan);
+            }
+
+            btnSubmit.disabled = false;
+            btnSubmit.className = "w-full mt-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-lg cursor-pointer";
+            
+            document.getElementById('transaction-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        window.handleTypeChange = function(input) {
+            const labels = input.closest('.grid').querySelectorAll('label');
+            labels.forEach(lbl => {
+                // Hindari merusak class style jika dinonaktifkan
+                if (!lbl.classList.contains('opacity-40')) {
+                    lbl.className = "flex items-center justify-center py-3 px-4 border rounded-xl cursor-pointer text-sm font-semibold transition hover:bg-slate-50 border-slate-200";
+                } else {
+                    lbl.className = "flex items-center justify-center py-3 px-4 border rounded-xl cursor-pointer text-sm font-semibold transition border-slate-200 opacity-40 cursor-not-allowed pointer-events-none";
+                }
+            });
+
+            const parentLabel = input.closest('label');
+            if (input.value === 'Permintaan') {
+                parentLabel.className = "flex items-center justify-center py-3 px-4 border-2 rounded-xl cursor-pointer text-sm font-bold transition bg-blue-50/40 border-blue-500";
+            } else {
+                parentLabel.className = "flex items-center justify-center py-3 px-4 border-2 rounded-xl cursor-pointer text-sm font-bold transition bg-indigo-50/40 border-indigo-500";
+            }
+        };
+
+        window.submitTransaction = async function(e) {
+            e.preventDefault();
+
+            const barcode = document.getElementById('form-barcode').value;
+            const cylinderType = document.getElementById('form-cylinder-type').value;
+            const type = document.querySelector('input[name="transaksi_tipe"]:checked')?.value;
+            const mechanic = document.getElementById('form-mechanic').value.trim();
+            const allocation = document.getElementById('form-allocation').value;
+            const keepMetadata = document.getElementById('keep-metadata-toggle').checked;
+
+            if (!barcode || !type || !mechanic || !allocation) {
+                showModal('Input Kosong', 'Silakan lengkapi semua isian formulir transaksi.', 'error');
+                return;
+            }
+
+            // Validasi final ganda di level logika JavaScript sebelum data dikirim
+            const correctStatusCheck = getCylinderCurrentStatus(barcode);
+            if (correctStatusCheck === 'Permintaan' && type === 'Permintaan') {
+                showModal('Gagal Catat', `Tabung ${barcode} saat ini sedang dibawa keluar! Silakan lakukan proses Pengembalian terlebih dahulu.`, 'error');
+                return;
+            }
+            if (correctStatusCheck === 'Pengembalian' && type === 'Pengembalian') {
+                showModal('Gagal Catat', `Tabung ${barcode} sudah ada di gudang! Silakan lakukan proses Permintaan terlebih dahulu.`, 'error');
+                return;
+            }
+
+            const timestamp = Date.now();
+            const dateStr = getFormattedDate();
+            const dayStr = getCurrentDayIndonesian();
+
+            const gasLabel = CYLINDER_TYPES[cylinderType]?.label || 'Lainnya';
+
+            const transactionData = {
+                type: type,
+                mechanic: mechanic,
+                allocation: allocation,
+                cylinderLabel: gasLabel,
+                barcode: barcode,
+                cylinderType: cylinderType,
+                date: dateStr,
+                day: dayStr,
+                timestamp: timestamp
+            };
+
+            // 1. Send data to Google Sheets via Apps Script Web App (Realtime Direct Send)
+            let appsScriptSuccess = false;
+
+            if (APPS_SCRIPT_URL && APPS_SCRIPT_URL !== "ISI_URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI") {
+                try {
+                    await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', 
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(transactionData)
+                    });
+                    appsScriptSuccess = true;
+                } catch (err) {
+                    console.error("Gagal mengirim data ke Google Sheets Apps Script:", err);
+                }
+            }
+
+            // 2. Save locally/Cloud DB
+            if (isFirebaseActive) {
+                try {
+                    const docId = `TX-${timestamp}`;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'transactions', docId), transactionData);
+                    
+                    let msg = 'Data transaksi Anda berhasil disinkronisasikan ke Sheets database cloud.';
+                    if (appsScriptSuccess) msg += ' Serta berhasil ditambahkan ke Google Sheets Anda!';
+                    showModal('Transaksi Tercatat!', msg, 'success');
+                } catch (err) {
+                    console.error("Save transaction failed:", err);
+                    showModal('Koneksi Gagal', 'Gagal mengirim transaksi ke server cloud.', 'error');
+                }
+            } else {
+                transactionData.id = `TX-${timestamp}`;
+                localTransactions.push(transactionData);
+                saveLocalData('offline_transactions', localTransactions);
+                updateUIPanels();
+
+                let msg = 'Data transaksi berhasil disimpan ke memori penyimpanan lokal.';
+                if (APPS_SCRIPT_URL && APPS_SCRIPT_URL !== "ISI_URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI") {
+                    if (appsScriptSuccess) {
+                        msg += ' Dan berhasil mengalir langsung ke baris Google Sheets Anda!';
+                    } else {
+                        msg += ' Namun gagal mengirim ke Google Sheets Anda, pastikan URL Apps Script benar.';
+                    }
+                }
+                showModal('Berhasil Disimpan!', msg, 'success');
+            }
+
+            // Penanganan Reset berdasarkan status "Mode Multi-Scan"
+            if (keepMetadata) {
+                // Hanya mengosongkan info barcode agar formulir utama tetap terkunci
+                document.getElementById('form-barcode').value = '';
+                document.getElementById('form-cylinder-type').value = '';
+            } else {
+                // Reset total formulir jika mode multi-scan mati
+                document.getElementById('transaction-form').reset();
+                document.querySelectorAll('input[name="transaksi_tipe"]').forEach(input => {
+                    const parentLabel = input.closest('label');
+                    parentLabel.className = "flex items-center justify-center py-3 px-4 border rounded-xl cursor-pointer text-sm font-semibold transition hover:bg-slate-50 border-slate-200";
+                });
+            }
+
+            // Kembalikan status disable radio ke normal
+            radioPermintaan.disabled = false;
+            radioPengembalian.disabled = false;
+            labelPermintaan.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+            labelPengembalian.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+
+            document.getElementById('scanned-info-card').classList.add('hidden');
+            const btnSubmit = document.getElementById('btn-submit-form');
+            btnSubmit.disabled = true;
+            btnSubmit.className = "w-full mt-4 py-3 bg-slate-200 text-slate-400 font-bold rounded-xl text-sm transition cursor-not-allowed";
+
+            document.getElementById('scan-status-badge').innerText = "Menunggu Scan...";
+            document.getElementById('scan-status-badge').className = "px-2.5 py-1 text-xs rounded-full font-bold bg-slate-100 text-slate-500";
+        };
+
+        function renderCharts() {
+            const distCtx = document.getElementById('chartDistribution')?.getContext('2d');
+            const allocCtx = document.getElementById('chartAllocation')?.getContext('2d');
+
+            if (!distCtx || !allocCtx) return;
+
+            const distData = {
+                'samator': { label: 'Oxy Samator', req: 0, iss: 0 },
+                'hb': { label: 'Oxy HB', req: 0, iss: 0 },
+                'lpg_12_biru': { label: 'LPG Biru 12kg', req: 0, iss: 0 },
+                'lpg_12_pink': { label: 'LPG Pink 12kg', req: 0, iss: 0 },
+                'lpg_50': { label: 'LPG 50kg', req: 0, iss: 0 },
+                'acetylene': { label: 'Acetylene', req: 0, iss: 0 }
+            };
+
+            localTransactions.forEach(tx => {
+                if (distData[tx.cylinderType]) {
+                    if (tx.type === 'Permintaan') distData[tx.cylinderType].req++;
+                    if (tx.type === 'Pengembalian' || tx.type === 'Pengeluaran') distData[tx.cylinderType].iss++;
+                }
+            });
+
+            const allocCounts = {};
+            localTransactions.forEach(tx => {
+                allocCounts[tx.allocation] = (allocCounts[tx.allocation] || 0) + 1;
+            });
+
+            if (charts.dist) charts.dist.destroy();
+            if (charts.alloc) charts.alloc.destroy();
+
+            charts.dist = new Chart(distCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.values(distData).map(d => d.label),
+                    datasets: [
+                        {
+                            label: 'Permintaan (Masuk)',
+                            data: Object.values(distData).map(d => d.req),
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Pengembalian (Keluar)',
+                            data: Object.values(distData).map(d => d.iss),
+                            backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Inter', weight: 600 } } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            const sortedAlloc = Object.entries(allocCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            charts.alloc = new Chart(allocCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: sortedAlloc.map(a => a[0]),
+                    datasets: [{
+                        data: sortedAlloc.map(a => a[1]),
+                        backgroundColor: [
+                            'rgba(99, 102, 241, 0.85)',
+                            'rgba(14, 165, 233, 0.85)',
+                            'rgba(16, 185, 129, 0.85)',
+                            'rgba(245, 158, 11, 0.85)',
+                            'rgba(244, 63, 94, 0.85)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { family: 'Inter', size: 10 } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        window.exportToCSV = function() {
+            if (localTransactions.length === 0) {
+                showModal('Ekspor Gagal', 'Tidak ada data transaksi di spreadsheet untuk diekspor.', 'error');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,Tipe Transaksi (Kolom 1),Nama Mekanik (Kolom 2),Alokasi (Kolom 3),Jenis Tabung,Barcode/ID Tabung,Tanggal Input,Hari\n";
+
+            localTransactions.forEach((tx, idx) => {
+                const gasInfo = CYLINDER_TYPES[tx.cylinderType] || { label: 'Unknown' };
+                const row = [
+                    idx + 1,
+                    `"${tx.type}"`,
+                    `"${tx.mechanic}"`,
+                    `"${tx.allocation}"`,
+                    `"${gasInfo.label}"`,
+                    `"${tx.barcode}"`,
+                    `"${tx.date}"`,
+                    `"${tx.day}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `log_monitoring_tabung_${getFormattedDate().replace(/\//g, '-')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.deleteTransaction = async function(id) {
+            if (isFirebaseActive) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'transactions', id));
+                    showModal('Dihapus!', 'Baris data transaksi berhasil dihapus.', 'success');
+                } catch (err) {
+                    console.error("Gagal menghapus transaksi dari Firestore:", err);
+                }
+            } else {
+                localTransactions = localTransactions.filter(t => t.id !== id);
+                saveLocalData('offline_transactions', localTransactions);
+                updateUIPanels();
+                showModal('Dihapus!', 'Baris transaksi lokal berhasil dihapus.', 'success');
+            }
+        };
+
+        window.deleteCylinder = async function(id) {
+            if (isFirebaseActive) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cylinders', id));
+                    showModal('Terhapus!', `Tabung ${id} berhasil dihapus dari sistem database.`, 'success');
+                } catch (err) {
+                    console.error("Gagal menghapus cylinder dari Firestore:", err);
+                }
+            } else {
+                localCylinders = localCylinders.filter(c => c.id !== id);
+                saveLocalData('offline_cylinders', localCylinders);
+                updateUIPanels();
+                showModal('Terhapus!', `Tabung ${id} berhasil dihapus dari memori lokal.`, 'success');
+            }
+        };
+
+        window.showClearDataModal = function() {
+            document.getElementById('clear-modal').classList.remove('hidden');
+        };
+
+        window.closeClearModal = function() {
+            document.getElementById('clear-modal').classList.add('hidden');
+        };
+
+        window.clearAllSystemData = async function() {
+            closeClearModal();
+
+            if (isFirebaseActive) {
+                try {
+                    const queryTrans = query(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'));
+                    const queryCyls = query(collection(db, 'artifacts', appId, 'public', 'data', 'cylinders'));
+                    
+                    const snapshotTrans = await getDocs(queryTrans);
+                    const snapshotCyls = await getDocs(queryCyls);
+
+                    const deletePromises = [];
+                    snapshotTrans.forEach((document) => {
+                        deletePromises.push(deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'transactions', document.id)));
+                    });
+                    snapshotCyls.forEach((document) => {
+                        deletePromises.push(deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cylinders', document.id)));
+                    });
+
+                    await Promise.all(deletePromises);
+                    showModal('Sistem Bersih!', 'Semua data transaksi & tabung berhasil dibersihkan dari server cloud.', 'success');
+                } catch (err) {
+                    console.error("Gagal membersihkan database cloud:", err);
+                }
+            } else {
+                localTransactions = [];
+                localCylinders = [];
+                localStorage.removeItem('offline_transactions');
+                localStorage.removeItem('offline_cylinders');
+                updateUIPanels();
+                showModal('Sistem Bersih!', 'Semua data lokal berhasil dibersihkan dari memori browser.', 'success');
+            }
+        };
+
+        function getFormattedDate() {
+            const date = new Date();
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+
+        function getCurrentDayIndonesian() {
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const date = new Date();
+            return days[date.getDay()];
+        }
+
+        function updateLiveClock() {
+            const dateDisplay = document.getElementById('live-date');
+            const dayDisplay = document.getElementById('live-day');
+            if (dateDisplay && dayDisplay) {
+                dateDisplay.innerText = getFormattedDate();
+                dayDisplay.innerText = getCurrentDayIndonesian().toUpperCase();
+            }
+        }
+
+        window.showModal = function(title, message, type = 'success') {
+            const modal = document.getElementById('custom-modal');
+            const container = document.getElementById('modal-icon-container');
+            const icon = document.getElementById('modal-icon');
+
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = message;
+
+            if (type === 'success') {
+                container.className = "p-4 bg-emerald-50 text-emerald-500 rounded-full mb-4";
+                icon.className = "fa-solid fa-circle-check text-4xl";
+            } else {
+                container.className = "p-4 bg-rose-50 text-rose-500 rounded-full mb-4";
+                icon.className = "fa-solid fa-circle-xmark text-4xl";
+            }
+
+            modal.classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        };
+
+        window.fetchGoogleSheetData = fetchGoogleSheetData;
+
+        window.onload = function() {
+            startFirebaseConnection();
+            updateLiveClock();
+            setInterval(updateLiveClock, 30000);
+            
+            setTimeout(renderCharts, 1000);
+        };
+    </script>
+</body>
+</html>
