@@ -73,7 +73,6 @@
                 <div class="flex items-center space-x-3">
                     <div class="p-2 bg-white rounded-lg text-white">
                         <img src="https://media-cgk1-2.cdn.whatsapp.net/v/t61.24694-24/457793807_559873033222220_9135348751047471074_n.jpg?ccb=11-4&oh=01_Q5Aa4wFmQ9SpKJLHqZN2LsQSdDF595FiolIAYQjHIiJzMVoj5Q&oe=6A44BD69&_nc_sid=5e03e0&_nc_cat=100" alt="Logo" class="w-8 h-8 rounded-full object-cover">
-                        <!-- <i class="fa-solid fa-gas-pump text-lg"></i> -->
                     </div>
                     <div>
                         <span class="font-extrabold text-base sm:text-lg tracking-wider text-indigo-400">OPERATIONAL STORAGE</span>
@@ -322,7 +321,7 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Barcode Scanner Frame ala Google Lens (Kiri) -->
+                <!-- Barcode Scanner Frame (Kiri) -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 lg:col-span-7 flex flex-col justify-between">
                     <div>
                         <h3 class="font-bold text-base sm:text-lg text-slate-800 mb-1 flex items-center">
@@ -337,14 +336,11 @@
                             <!-- HTML5 QR Code Reader Container -->
                             <div id="reader" class="absolute inset-0 w-full h-full z-0"></div>
 
-                            <!-- Google Lens Top Header Bar (Absolute Overlay) -->
+                            <!-- Google Lens Top Header Bar (Absolute Overlay) - Flash button removed -->
                             <div class="absolute top-0 left-0 right-0 p-4 flex items-center justify-between text-white bg-gradient-to-b from-black/80 via-black/40 to-transparent z-10 select-none">
                                 <div class="flex items-center space-x-2">
                                     <button onclick="stopCamera()" class="p-2.5 hover:bg-white/15 active:scale-95 rounded-full transition pointer-events-auto bg-black/20 backdrop-blur-sm border border-white/10" title="Tutup Kamera">
                                         <i class="fa-solid fa-arrow-left text-base"></i>
-                                    </button>
-                                    <button onclick="toggleSimulatedFlash()" id="flash-toggle-btn" class="p-2.5 hover:bg-white/15 active:scale-95 rounded-full transition pointer-events-auto bg-black/20 backdrop-blur-sm border border-white/10" title="Senter">
-                                        <i class="fa-solid fa-bolt-slash text-base text-slate-300"></i>
                                     </button>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -615,6 +611,7 @@
         <!-- TAB 2: BARCODE GENERATOR & MANAGER         -->
         <!-- ========================================== -->
         <div id="view-generator" class="tab-view hidden space-y-6">
+            
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- Barcode Maker Input (Kiri) -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 lg:col-span-5 flex flex-col justify-between">
@@ -767,7 +764,6 @@
         let currentTab = 'dashboard'; // Mengubah default landing tab ke Dashboard analitik kustom
         let cameraScanner = null;
         let currentFacingMode = "environment"; // Kamera belakang bawaan
-        let isSimulatedFlashOn = false; // Status simulasi senter
 
         const CYLINDER_TYPES = {
             'samator': { label: 'Oxygen Samator', prefix: 'OXY-SAM', color: 'bg-blue-600', text: 'text-blue-600', icon: 'fa-lungs' },
@@ -1100,16 +1096,9 @@
                 document.getElementById('dash-stat-today-tx-sub').innerText = `${inToday} Masuk | ${outToday} Keluar`;
             }
 
-            // 2. Render Distribusi per Jenis Tabung
             renderCylinderTypeDistribution(evalTimestamp);
-
-            // 3. Render Tren Sirkulasi 7 Hari Terakhir / Kelompok Rentang (Chart)
             renderWeeklyActivityChart(filteredTransactions);
-
-            // 4. Render Peringkat Alokasi Site
             renderAllocationRankings(filteredTransactions);
-
-            // 5. Render Tabel Tabung Belum Dikembalikan
             renderUnreturnedCylindersTable(unreturnedList);
         }
 
@@ -1176,7 +1165,6 @@
             const counts = [];
 
             if (filterStartDate && filterEndDate) {
-                // Jika filter pencarian rentang tanggal kustom aktif, bagi rata periode tersebut
                 if (titleEl) titleEl.innerText = 'Trend Sirkulasi Periode Terpilih';
                 const startMs = filterStartDate.getTime();
                 const endMs = filterEndDate.getTime();
@@ -1196,7 +1184,6 @@
                     labels.push(`${day}/${month}`);
                 }
             } else {
-                // Default: Kelompokkan secara presisi berdasarkan 7 hari kalender terakhir (Jam 00:00:00 s.d 23:59:59)
                 if (titleEl) titleEl.innerText = 'Trend Sirkulasi 7 Hari Terakhir';
                 const now = new Date();
                 
@@ -1204,7 +1191,6 @@
                     const d = new Date();
                     d.setDate(now.getDate() - i);
                     
-                    // Batas awal (midnight) dan akhir hari kalender terkait
                     const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0).getTime();
                     const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
                     
@@ -1214,7 +1200,6 @@
                     const day = String(d.getDate()).padStart(2, '0');
                     const month = String(d.getMonth() + 1).padStart(2, '0');
                     
-                    // Tandai khusus untuk hari ini agar lebih jelas di diagram
                     if (i === 0) {
                         labels.push(`${day}/${month} (Kini)`);
                     } else {
@@ -1243,7 +1228,6 @@
             container.innerHTML = `
                 <div class="relative w-full h-48 border-b border-slate-100">
                     <svg class="w-full h-full" style="overflow: visible;">
-                        <!-- Grid Lines -->
                         <line x1="0" y1="0" x2="100%" y2="0" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4" />
                         <line x1="0" y1="45" x2="100%" y2="45" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4" />
                         <line x1="0" y1="90" x2="100%" y2="90" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4" />
@@ -1562,7 +1546,6 @@
                 return;
             }
 
-            // Dioptimalkan menjadi '1.4' agar barcode fisik jauh lebih ringkas, padat, dan anti-blur saat di-scan kamera
             JsBarcode("#barcode-preview-img", barcodeValue, {
                 format: "CODE128",
                 width: 1.4, 
@@ -1593,7 +1576,6 @@
 
         window.downloadCylinderBarcode = function(barcode) {
             const tempCanvas = document.createElement('canvas');
-            // Menggunakan ketebalan '1.4' agar barcode tidak terlalu panjang & mudah terdeteksi kamera
             JsBarcode(tempCanvas, barcode, {
                 format: "CODE128",
                 width: 1.4,
@@ -1647,7 +1629,6 @@
             const info = CYLINDER_TYPES[type];
             document.getElementById('print-title').innerText = info.label;
             
-            // Lebar diatur '1.5' agar hasil cetak fisik pas di tabung gas & mudah terbaca sensor kamera
             JsBarcode("#print-svg", barcode, {
                 format: "CODE128",
                 width: 1.5,
@@ -1679,7 +1660,7 @@
             }
         };
 
-        // Mulai kamera dengan optimasi Anti-Blur & Auto Focus berkelanjutan (HD Resolution)
+        // Mulai kamera dengan optimasi Anti-Blur & Auto Focus berkelanjutan (HD Resolution) - Flash button completely removed
         window.startCamera = function() {
             document.getElementById('camera-loading').classList.add('hidden');
             
@@ -1700,9 +1681,8 @@
             });
             
             const config = { 
-                fps: 30, // Ditingkatkan ke 30 FPS untuk mencegah blur saat bergerak/gemetar
+                fps: 30, // Ditingkatkan ke 30 FPS untuk mencegah blur saat bergerak
                 qrbox: function(width, height) {
-                    // Area pemindaian dioptimalkan agar lebih fleksibel menangkap barcode horizontal
                     return {
                         width: Math.min(width * 0.95, 300),
                         height: Math.min(height * 0.45, 120)
@@ -1711,14 +1691,12 @@
                 aspectRatio: 0.75 
             };
 
-            // Memperbaiki argumen pertama objek constraints agar tepat memiliki 1 kunci (facingMode) sesuai aturan html5-qrcode
             cameraScanner.start(
                 { facingMode: currentFacingMode },
                 config,
                 onScanSuccess,
                 onScanFailure
             ).then(() => {
-                // Memicu continuous autofocus pada lensa kamera ponsel (jika browser mengizinkan)
                 try {
                     const activeTrack = cameraScanner.getActiveTrack();
                     if (activeTrack && typeof activeTrack.getCapabilities === "function") {
@@ -1759,21 +1737,6 @@
                     document.getElementById('camera-loading').classList.remove('hidden');
                     document.getElementById('camera-controls-panel').classList.add('hidden');
                 }).catch(err => console.warn("Gagal matikan kamera:", err));
-            }
-        };
-
-        // Fungsi interaktif simulasi Senter (Flash)
-        window.toggleSimulatedFlash = function() {
-            isSimulatedFlashOn = !isSimulatedFlashOn;
-            const btn = document.getElementById('flash-toggle-btn');
-            if (isSimulatedFlashOn) {
-                btn.innerHTML = `<i class="fa-solid fa-bolt text-base text-amber-300 animate-pulse"></i>`;
-                btn.className = "p-2.5 hover:bg-white/15 active:scale-95 rounded-full transition pointer-events-auto bg-amber-500/20 backdrop-blur-sm border border-amber-400 shadow-sm";
-                showModal("Pemindai Kamera", "Senter simulasi diaktifkan. Kecerahan gambar disesuaikan secara visual.", "success");
-            } else {
-                btn.innerHTML = `<i class="fa-solid fa-bolt-slash text-base text-slate-300"></i>`;
-                btn.className = "p-2.5 hover:bg-white/15 active:scale-95 rounded-full transition pointer-events-auto bg-black/20 backdrop-blur-sm border border-white/10";
-                showModal("Pemindai Kamera", "Senter simulasi dimatikan.", "success");
             }
         };
 
@@ -1961,7 +1924,7 @@
                     const docId = `TX-${timestamp}`;
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'transactions', docId), transactionData);
                     
-                    let msg = 'Transaksi berhasil disinkronkan secara real-time ke semua perangkat.';
+                    let msg = 'Transaksi berhasil, Data Berhasil Terkirim ke Google Sheets';
                     if (appsScriptSuccess) msg += ' Data juga mengalir ke Google Sheets Anda.';
                     showModal('Sukses Real-time!', msg, 'success');
                 } catch (err) {
@@ -2165,7 +2128,6 @@
                     if (e.target.files.length === 0) return;
                     const imageFile = e.target.files[0];
                     
-                    // Membuat instance lokal Html5Qrcode untuk memproses pembacaan statis file gambar
                     const html5QrCode = new Html5Qrcode("reader");
                     try {
                         showModal("Memproses Gambar", "Menganalisis barcode dari berkas gambar...", "success");
@@ -2173,7 +2135,7 @@
                         processScannedBarcode(decodedText);
                     } catch (err) {
                         console.error(err);
-                        showModal("Gagal Membaca", "Tidak dapat mendeteksi barcode yang valid dari gambar ini. Pastikan gambar jelas dan beresolusi baik.", "error");
+                        showModal("Gagal Membaca", "Tidak dapat mendeteksi barcode yang valid dari gambar ini. Pastikan gambar jelas.", "error");
                     }
                 });
             }
